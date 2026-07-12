@@ -2,29 +2,20 @@
 # -*- coding: utf-8 -*-
 
 # open_ports_checker.py
-# Показывает открытые TCP-порты на локальной машине с указанием процесса.
+# Показывает открытые TCP-порты (LISTEN) с PID.
 
-import socket
 import psutil
 
 def get_open_ports():
-    """Возвращает список открытых TCP-портов (LISTEN) с PID процесса."""
+    """Возвращает список открытых TCP-портов с PID (только если PID существует)."""
     ports = []
     for conn in psutil.net_connections(kind='tcp'):
-        if conn.status == 'LISTEN':
+        if conn.status == 'LISTEN' and conn.pid is not None:
             ports.append({
                 'port': conn.laddr.port,
                 'pid': conn.pid,
-                'process_name': None,
             })
     return ports
-
-def get_process_name(pid):
-    """Возвращает имя процесса по PID."""
-    try:
-        return psutil.Process(pid).name()
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return "недоступно"
 
 def main():
     print("=== Открытые TCP-порты (LISTEN) ===")
@@ -33,13 +24,12 @@ def main():
         print("Нет открытых портов.")
         return
 
-    print(f"{'Порт':>6} {'PID':>6} {'Процесс'}")
+    print(f"{'Порт':>6} {'PID':>6}")
     for p in ports:
-        if p['pid']:
-            p['process_name'] = get_process_name(p['pid'])
-        else:
-            p['process_name'] = "неизвестно"
-        print(f"{p['port']:>6} {p['pid']:>6} {p['process_name']}")
+        # Защита от None (на всякий случай)
+        port = str(p['port']) if p['port'] is not None else '—'
+        pid = str(p['pid']) if p['pid'] is not None else '—'
+        print(f"{port:>6} {pid:>6}")
 
 if __name__ == "__main__":
     main()
